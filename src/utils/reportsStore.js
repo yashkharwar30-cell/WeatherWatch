@@ -412,3 +412,38 @@ function extractState(locationStr) {
   const parts = locationStr.split(',');
   return parts.length > 1 ? parts[parts.length - 1].trim() : 'India';
 }
+
+export function updateReportStatus(reportId, newStatus) {
+  const current = getStoredReports();
+  const updated = current.map((r) => {
+    if (r.id === reportId) {
+      return { ...r, status: newStatus };
+    }
+    return r;
+  });
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+  } catch (e) {
+    console.error('Error updating report status in localStorage', e);
+  }
+  return updated;
+}
+
+export function getAICategory(eventType) {
+  switch (eventType) {
+    case 'Heavy Rain':
+    case 'Flood':
+      return 'Hydrological';
+    case 'Thunderstorm':
+    case 'Strong Wind':
+      return 'Severe Storm';
+    case 'Heatwave':
+      return 'Thermal Hazard';
+    case 'Fog':
+    case 'Dust Storm':
+      return 'Atmospheric';
+    default:
+      return 'Meteorological';
+  }
+}
+
