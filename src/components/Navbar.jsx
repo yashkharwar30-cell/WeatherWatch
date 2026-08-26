@@ -1,9 +1,25 @@
-import React, { useState } from 'react';
-import { NavLink, Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
+import { isAdminAuthenticated, clearAdminAuth } from '../utils/authStore';
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Re-check authentication state on route changes and storage events
+  useEffect(() => {
+    setIsAuthenticated(isAdminAuthenticated());
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setIsAuthenticated(isAdminAuthenticated());
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -13,12 +29,23 @@ export default function Navbar() {
     setMobileMenuOpen(false);
   };
 
+  const handleLogout = () => {
+    clearAdminAuth();
+    setIsAuthenticated(false);
+    closeMobileMenu();
+    navigate('/admin/login', { replace: true });
+  };
+
   const navItems = [
     { label: 'Home', path: '/' },
     { label: 'Live Dashboard', path: '/dashboard' },
     { label: 'Submit Report', path: '/report' },
     { label: 'Analytics', path: '/analytics' },
   ];
+
+  if (isAuthenticated) {
+    navItems.push({ label: 'Admin Dashboard', path: '/admin/dashboard' });
+  }
 
   return (
     <header className="bg-surface border-b border-outline-variant sticky top-0 z-50">
@@ -38,34 +65,41 @@ export default function Navbar() {
 
         {/* Navigation Links (Desktop) */}
         <nav className="hidden lg:flex gap-gutter items-center h-full">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={({ isActive }) =>
-                  `h-full flex items-center font-label-md text-label-md transition-colors ${
-                    isActive
-                      ? 'text-primary border-b-2 border-primary pb-1'
-                      : 'text-on-surface-variant hover:text-primary'
-                  }`
-                }
-              >
-                {item.label}
-              </NavLink>
-            );
-          })}
+          {navItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) =>
+                `h-full flex items-center font-label-md text-label-md transition-colors ${
+                  isActive
+                    ? 'text-primary border-b-2 border-primary pb-1'
+                    : 'text-on-surface-variant hover:text-primary'
+                }`
+              }
+            >
+              {item.label}
+            </NavLink>
+          ))}
         </nav>
 
         {/* Trailing Action */}
-        <div className="hidden lg:flex items-center">
-          <Link
-            to="/admin/login"
-            className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md border border-outline px-4 py-2 rounded-DEFAULT"
-          >
-            Admin Login
-          </Link>
+        <div className="hidden lg:flex items-center gap-3">
+          {isAuthenticated ? (
+            <button
+              onClick={handleLogout}
+              className="text-error hover:bg-error/10 transition-colors font-label-md text-label-md border border-error px-4 py-2 rounded-DEFAULT flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-sm">logout</span>
+              Logout
+            </button>
+          ) : (
+            <Link
+              to="/admin/login"
+              className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md border border-outline px-4 py-2 rounded-DEFAULT"
+            >
+              Admin Login
+            </Link>
+          )}
         </div>
 
         {/* Mobile Menu Toggle */}
@@ -131,18 +165,43 @@ export default function Navbar() {
             <span className="material-symbols-outlined">analytics</span>
             <span className="font-headline-sm text-headline-sm">Analytics</span>
           </NavLink>
-          <NavLink
-            to="/admin/login"
-            onClick={closeMobileMenu}
-            className={({ isActive }) =>
-              `flex items-center gap-4 px-margin-mobile py-4 ${
-                isActive ? 'text-primary bg-surface-container font-semibold' : 'text-primary hover:bg-surface-container'
-              }`
-            }
-          >
-            <span className="material-symbols-outlined">login</span>
-            <span className="font-headline-sm text-headline-sm">Admin Login</span>
-          </NavLink>
+
+          {isAuthenticated ? (
+            <>
+              <NavLink
+                to="/admin/dashboard"
+                onClick={closeMobileMenu}
+                className={({ isActive }) =>
+                  `flex items-center gap-4 px-margin-mobile py-4 ${
+                    isActive ? 'text-primary bg-surface-container font-semibold' : 'text-primary hover:bg-surface-container'
+                  }`
+                }
+              >
+                <span className="material-symbols-outlined">admin_panel_settings</span>
+                <span className="font-headline-sm text-headline-sm">Admin Dashboard</span>
+              </NavLink>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-4 px-margin-mobile py-4 text-error hover:bg-error/10 transition-colors text-left font-headline-sm text-headline-sm"
+              >
+                <span className="material-symbols-outlined">logout</span>
+                Logout
+              </button>
+            </>
+          ) : (
+            <NavLink
+              to="/admin/login"
+              onClick={closeMobileMenu}
+              className={({ isActive }) =>
+                `flex items-center gap-4 px-margin-mobile py-4 ${
+                  isActive ? 'text-primary bg-surface-container font-semibold' : 'text-primary hover:bg-surface-container'
+                }`
+              }
+            >
+              <span className="material-symbols-outlined">login</span>
+              <span className="font-headline-sm text-headline-sm">Admin Login</span>
+            </NavLink>
+          )}
         </nav>
       )}
     </header>
