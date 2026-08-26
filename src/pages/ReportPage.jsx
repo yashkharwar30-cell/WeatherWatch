@@ -1,5 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import LocationPicker from '../components/LocationPicker';
+import { saveReportToStore } from '../utils/reportsStore';
 
 const EVENT_TYPES = [
   'Heavy Rain',
@@ -20,26 +22,50 @@ export default function ReportPage() {
 
   // Form State
   const [eventType, setEventType] = useState('');
-  const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
   const [reporterName, setReporterName] = useState('');
   const [photo, setPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
 
+  // Structured Location State: { lat: number, lng: number, source: "gps" | "map" }
+  const [locationData, setLocationData] = useState({
+    lat: null,
+    lng: null,
+    source: null
+  });
+
   // UI & Loading States
-  const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [dragOver, setDragOver] = useState(false);
 
-  // Submitted Report State (if null, show form; if populated, show success screen)
+  // Submitted Report State
   const [submittedReport, setSubmittedReport] = useState(null);
+
+  // Formatted Coordinate String
+  const formattedLocationString = useMemo(() => {
+    if (!locationData.lat || !locationData.lng) return '';
+    const latStr = `${Math.abs(locationData.lat).toFixed(4)}° ${locationData.lat >= 0 ? 'N' : 'S'}`;
+    const lngStr = `${Math.abs(locationData.lng).toFixed(4)}° ${locationData.lng >= 0 ? 'E' : 'W'}`;
+    return `${latStr}, ${lngStr}`;
+  }, [locationData]);
+
+  // Location Change Handler
+  const handleLocationChange = (newLocation) => {
+    setLocationData(newLocation);
+    if (errors.location) {
+      setErrors((prev) => {
+        const updated = { ...prev };
+        delete updated.location;
+        return updated;
+      });
+    }
+  };
 
   // File Handling
   const processFile = (file) => {
     if (!file) return;
 
-    // Validate type
     if (!file.type.startsWith('image/')) {
       setErrors((prev) => ({
         ...prev,
@@ -48,7 +74,6 @@ export default function ReportPage() {
       return;
     }
 
-    // Validate size
     if (file.size > MAX_FILE_SIZE_BYTES) {
       setErrors((prev) => ({
         ...prev,
@@ -57,7 +82,6 @@ export default function ReportPage() {
       return;
     }
 
-    // Clear photo errors & set file
     setErrors((prev) => {
       const updated = { ...prev };
       delete updated.photo;
@@ -92,42 +116,6 @@ export default function ReportPage() {
     }
   };
 
-  // Browser Geolocation
-  const handleGetLocation = () => {
-    if (!navigator.geolocation) {
-      setErrors((prev) => ({
-        ...prev,
-        location: 'Geolocation is not supported by your browser.'
-      }));
-      return;
-    }
-
-    setIsGettingLocation(true);
-    setErrors((prev) => {
-      const updated = { ...prev };
-      delete updated.location;
-      return updated;
-    });
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude.toFixed(4);
-        const lng = position.coords.longitude.toFixed(4);
-        setLocation(`${lat}° N, ${lng}° E (Current GPS Location)`);
-        setIsGettingLocation(false);
-      },
-      (error) => {
-        setIsGettingLocation(false);
-        let errorMsg = 'Unable to detect location. Please enter manually.';
-        if (error.code === error.PERMISSION_DENIED) {
-          errorMsg = 'Location permission denied. Please enter your location manually.';
-        }
-        setErrors((prev) => ({ ...prev, location: errorMsg }));
-      },
-      { timeout: 10000, enableHighAccuracy: true }
-    );
-  };
-
   // Form Validation
   const validateForm = () => {
     const newErrors = {};
@@ -136,8 +124,8 @@ export default function ReportPage() {
       newErrors.eventType = 'Please select an event type.';
     }
 
-    if (!location.trim()) {
-      newErrors.location = 'Please enter or detect your location.';
+    if (!locationData.lat || !locationData.lng) {
+      newErrors.location = 'Please select a location on the map or click "Use My Current Location".';
     }
 
     if (!description.trim()) {
@@ -172,7 +160,9 @@ export default function ReportPage() {
       const newReport = {
         id: reportId,
         eventType,
-        location,
+        location: formattedLocationString,
+        latitude: locationData.lat,
+        longitude: locationData.lng,
         description,
         reporterName: reporterName.trim() || 'Anonymous Citizen',
         photoPreview,
@@ -180,22 +170,15 @@ export default function ReportPage() {
         date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
       };
 
-      // Save to localStorage
-      try {
-        const existing = JSON.parse(localStorage.getItem('weatherwatch_reports') || '[]');
-        localStorage.setItem('weatherwatch_reports', JSON.stringify([newReport, ...existing]));
-      } catch (err) {
-        console.error('Failed to save report to localStorage', err);
-      }
-
+      const saved = saveReportToStore(newReport);
       setIsSubmitting(false);
-      setSubmittedReport(newReport);
+      setSubmittedReport(saved);
     }, 800);
   };
 
   const handleReset = () => {
     setEventType('');
-    setLocation('');
+    setLocationData({ lat: null, lng: null, source: null });
     setDescription('');
     setReporterName('');
     setPhoto(null);
@@ -207,11 +190,10 @@ export default function ReportPage() {
     }
   };
 
-  // SUCCESS SCREEN VIEW (Matching Stitch Design: Screen e1d5adfc491a420eabe4f44ece1e31ae)
+  // SUCCESS SCREEN VIEW
   if (submittedReport) {
     return (
       <div className="w-full px-4 md:px-margin-desktop py-12 max-w-container-max mx-auto flex flex-col gap-8 animate-fadeIn">
-        {/* Success Banner Card */}
         <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-8 shadow-sm flex flex-col items-center text-center max-w-3xl mx-auto w-full gap-6">
           <div className="w-20 h-20 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
             <span className="material-symbols-outlined text-5xl" style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -226,7 +208,6 @@ export default function ReportPage() {
             </p>
           </div>
 
-          {/* Report ID & Timestamp Badge */}
           <div className="bg-surface-container w-full p-4 rounded border border-outline-variant flex flex-col sm:flex-row items-center justify-between gap-4 font-mono-md text-sm">
             <div className="flex items-center gap-2">
               <span className="text-outline uppercase text-xs">Report ID:</span>
@@ -244,7 +225,6 @@ export default function ReportPage() {
             </div>
           </div>
 
-          {/* Summary Details Box */}
           <div className="w-full text-left bg-surface-container-low border border-outline-variant p-6 rounded flex flex-col md:flex-row gap-6 justify-between">
             <div className="flex-grow flex flex-col gap-3">
               <div>
@@ -258,9 +238,9 @@ export default function ReportPage() {
 
               <div>
                 <span className="block font-label-md text-xs text-outline uppercase tracking-wider mb-0.5">
-                  LOCATION
+                  LOCATION COORDINATES
                 </span>
-                <span className="font-body-md text-on-surface font-medium">
+                <span className="font-body-md text-on-surface font-medium font-mono-md">
                   {submittedReport.location}
                 </span>
               </div>
@@ -300,7 +280,6 @@ export default function ReportPage() {
             )}
           </div>
 
-          {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mt-2">
             <Link
               to="/dashboard"
@@ -322,7 +301,7 @@ export default function ReportPage() {
     );
   }
 
-  // DEFAULT FORM VIEW (Matching Stitch Design: Screen d106b26e55de4f31889ce149244e7bbb)
+  // DEFAULT FORM VIEW
   return (
     <div className="w-full px-4 md:px-margin-desktop py-8 max-w-container-max mx-auto flex flex-col gap-8">
       {/* Page Header */}
@@ -338,7 +317,7 @@ export default function ReportPage() {
         {/* LEFT (FORM) */}
         <section className="lg:col-span-7 bg-surface-container-lowest p-6 rounded-lg border border-outline-variant shadow-sm flex flex-col gap-6">
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-
+            
             {/* Event Type */}
             <div className="flex flex-col gap-1">
               <label className="font-label-md text-label-md text-on-surface" htmlFor="eventType">
@@ -353,8 +332,9 @@ export default function ReportPage() {
                     setErrors((prev) => ({ ...prev, eventType: undefined }));
                   }
                 }}
-                className={`bg-surface-container-low border rounded p-3 font-body-md text-body-md text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none ${errors.eventType ? 'border-error ring-1 ring-error' : 'border-outline-variant'
-                  }`}
+                className={`bg-surface-container-low border rounded p-3 font-body-md text-body-md text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none ${
+                  errors.eventType ? 'border-error ring-1 ring-error' : 'border-outline-variant'
+                }`}
               >
                 <option value="" disabled>Select event type...</option>
                 {EVENT_TYPES.map((type) => (
@@ -371,38 +351,13 @@ export default function ReportPage() {
               )}
             </div>
 
-            {/* Location */}
+            {/* Interactive Leaflet Location Picker Component */}
             <div className="flex flex-col gap-1">
-              <label className="font-label-md text-label-md text-on-surface" htmlFor="location">
-                Location <span className="text-error">*</span>
-              </label>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  id="location"
-                  type="text"
-                  value={location}
-                  onChange={(e) => {
-                    setLocation(e.target.value);
-                    if (errors.location) {
-                      setErrors((prev) => ({ ...prev, location: undefined }));
-                    }
-                  }}
-                  placeholder="Enter street address, landmark, or coordinates"
-                  className={`flex-grow bg-surface-container-low border rounded p-3 font-body-md text-body-md text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none ${errors.location ? 'border-error ring-1 ring-error' : 'border-outline-variant'
-                    }`}
-                />
-                <button
-                  type="button"
-                  onClick={handleGetLocation}
-                  disabled={isGettingLocation}
-                  className="bg-surface-container border border-outline-variant text-on-surface px-4 py-3 rounded font-label-md text-label-md hover:bg-surface-variant transition-colors flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50"
-                >
-                  <span className="material-symbols-outlined text-sm">
-                    {isGettingLocation ? 'progress_activity' : 'my_location'}
-                  </span>
-                  {isGettingLocation ? 'Detecting...' : 'Use my location'}
-                </button>
-              </div>
+              <LocationPicker
+                locationData={locationData}
+                onChange={handleLocationChange}
+                error={errors.location}
+              />
               {errors.location && (
                 <span className="text-error text-xs font-body-sm mt-0.5 flex items-center gap-1">
                   <span className="material-symbols-outlined text-xs">error</span>
@@ -427,8 +382,9 @@ export default function ReportPage() {
                   }
                 }}
                 placeholder="Describe the severity, damage, or current situation..."
-                className={`bg-surface-container-low border rounded p-3 font-body-md text-body-md text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none resize-y ${errors.description ? 'border-error ring-1 ring-error' : 'border-outline-variant'
-                  }`}
+                className={`bg-surface-container-low border rounded p-3 font-body-md text-body-md text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none resize-y ${
+                  errors.description ? 'border-error ring-1 ring-error' : 'border-outline-variant'
+                }`}
               />
               {errors.description && (
                 <span className="text-error text-xs font-body-sm mt-0.5 flex items-center gap-1">
@@ -453,12 +409,13 @@ export default function ReportPage() {
                   onDragLeave={() => setDragOver(false)}
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors text-center ${dragOver
+                  className={`border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors text-center ${
+                    dragOver
                       ? 'border-primary bg-primary/5'
                       : errors.photo
-                        ? 'border-error bg-error/5'
-                        : 'border-outline-variant bg-surface-container-low hover:bg-surface-container'
-                    }`}
+                      ? 'border-error bg-error/5'
+                      : 'border-outline-variant bg-surface-container-low hover:bg-surface-container'
+                  }`}
                 >
                   <span className="material-symbols-outlined text-4xl text-outline">
                     add_a_photo
@@ -557,34 +514,9 @@ export default function ReportPage() {
           </form>
         </section>
 
-        {/* RIGHT (MAP & LIVE PREVIEW SIDEBAR) */}
+        {/* RIGHT (LIVE REPORT SUMMARY PREVIEW SIDEBAR) */}
         <aside className="lg:col-span-5 flex flex-col gap-6">
-          {/* Map Card */}
-          <div className="bg-surface-container-lowest rounded-lg border border-outline-variant shadow-sm overflow-hidden flex flex-col h-[300px]">
-            <div className="bg-surface-container px-4 py-2 border-b border-outline-variant font-label-md text-label-md text-on-surface font-semibold flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">map</span>
-              Selected Location
-            </div>
-            <div className="flex-grow relative bg-surface-container-low flex items-center justify-center">
-              <img
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJOncXahO5SRyd_WuC1gZrrXbEX0PD1en5eP5PMAoyviVeq386FkRdaStce1cfFO2-K6l67xgde7_wILO0qd5pXMz4gZ6v7YpCgPUhMlgiF0_NnOeD2FytwZZKBY6EQ9rRXelGIWHn3sETIKE_x1y2o2AXkHyNT5REuOLFgpntDzNjoOZUumxek_KTJe_8fWVGT-s3Pc322q6UtFTY3gxRISoErMr51TcxQXB9FA8Gau9ExpMzKxu6gQ"
-                alt="Selected location map"
-                className="w-full h-full object-cover"
-              />
-              {location && (
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-surface p-2 rounded shadow-md border border-primary flex items-center gap-2 z-10 animate-bounce">
-                  <span className="material-symbols-outlined text-error" style={{ fontVariationSettings: "'FILL' 1" }}>
-                    location_on
-                  </span>
-                  <span className="font-mono-md text-xs text-primary font-bold">
-                    Target Lock
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Dynamic Report Preview Card */}
+          {/* Dynamic Report Summary Preview Card */}
           <div className="bg-surface-container-lowest rounded-lg border border-outline-variant shadow-sm p-5 flex flex-col gap-4">
             <div className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider mb-1 flex items-center gap-2">
               <span className="material-symbols-outlined text-sm">preview</span>
@@ -613,8 +545,8 @@ export default function ReportPage() {
 
             <div className="flex flex-col gap-1">
               <span className="font-body-sm text-xs text-outline uppercase tracking-wider">Location</span>
-              <span className="font-body-md text-on-surface font-medium truncate">
-                {location || '--'}
+              <span className="font-body-md text-on-surface font-medium font-mono-md truncate">
+                {formattedLocationString || 'Not selected'}
               </span>
             </div>
 
