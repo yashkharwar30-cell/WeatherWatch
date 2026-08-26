@@ -1,21 +1,751 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import {
+  getStoredReports,
+  getEventMarkerColor,
+  getStatusBadgeStyle
+} from '../utils/reportsStore';
+
+// Custom Leaflet DivIcon Generator for Event Types
+function createCustomMarkerIcon(eventType, status) {
+  const color = getEventMarkerColor(eventType);
+  const isPending = status === 'Pending';
+  
+  return L.divIcon({
+    className: 'custom-weather-marker',
+    html: `
+      <div style="
+        background-color: ${color};
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        border: 2.5px solid #ffffff;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 11px;
+        cursor: pointer;
+        position: relative;
+      ">
+        <span style="font-size: 13px; line-height: 1;">●</span>
+        ${isPending ? `<span style="position: absolute; top: -3px; right: -3px; width: 8px; height: 8px; border-radius: 50%; background-color: #f59e0b; border: 1px solid white;"></span>` : ''}
+      </div>
+    `,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+    popupAnchor: [0, -14]
+  });
+}
+
+// Map Controller for Center & Zoom Animation
+function MapViewController({ center, zoom }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center) {
+      map.flyTo(center, zoom || 8, { duration: 1.2 });
+    }
+  }, [center, zoom, map]);
+  return null;
+}
+
+const EVENT_TYPES = [
+  'Heavy Rain',
+  'Flood',
+  'Thunderstorm',
+  'Heatwave',
+  'Fog',
+  'Dust Storm',
+  'Strong Wind'
+];
+
+const STATUS_OPTIONS = ['Pending', 'Verified', 'Rejected', 'Duplicate'];
 
 export default function DashboardPage() {
-  return (
-    <div className="w-full px-4 md:px-margin-desktop max-w-container-max mx-auto py-12">
-      <div className="flex items-center gap-3 mb-6">
-        <span className="material-symbols-outlined text-primary text-3xl">dashboard</span>
-        <h1 className="font-headline-lg text-headline-lg text-primary">Live Weather Dashboard</h1>
-      </div>
-      <p className="font-body-md text-on-surface-variant mb-8">
-        Real-time telemetry and verified report monitoring grid.
-      </p>
+  const [reports, setReports] = useState([]);
+  const [activeTab, setActiveTab] = useState('map'); // 'map' | 'table'
 
-      <div className="bg-surface border border-outline-variant p-12 text-center text-on-surface-variant rounded-DEFAULT">
-        <span className="material-symbols-outlined text-4xl text-outline mb-2">map</span>
-        <p className="font-headline-sm text-primary mb-1">Live Telemetry Grid</p>
-        <p className="font-body-sm text-on-surface-variant">
-          Interactive radar maps and live event feeds will be activated in the next development iteration.
+  // Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedEventType, setSelectedEventType] = useState('All');
+  const [selectedState, setSelectedState] = useState('All');
+  const [selectedStatus, setSelectedStatus] = useState('All');
+
+  // Map & Detail States
+  const [mapCenter, setMapCenter] = useState([22.5, 79.5]);
+  const [mapZoom, setMapZoom] = useState(5);
+  const [selectedReport, setSelectedReport] = useState(null);
+
+  // Load Reports from centralized localStorage store
+  useEffect(() => {
+    const data = getStoredReports();
+    setReports(data);
+  }, []);
+
+  // Compute unique states for filter dropdown
+  const uniqueStates = useMemo(() => {
+    const states = new Set();
+    reports.forEach((r) => {
+      if (r.state) states.add(r.state);
+    });
+    return Array.from(states).sort();
+  }, [reports]);
+
+  // Filter reports
+  const filteredReports = useMemo(() => {
+    return reports.filter((r) => {
+      const matchesSearch =
+        searchQuery.trim() === '' ||
+        r.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.eventType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.id.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesType =
+        selectedEventType === 'All' || r.eventType === selectedEventType;
+
+      const matchesState =
+        selectedState === 'All' || r.state === selectedState;
+
+      const matchesStatus =
+        selectedStatus === 'All' || r.status === selectedStatus;
+
+      return matchesSearch && matchesType && matchesState && matchesStatus;
+    });
+  }, [reports, searchQuery, selectedEventType, selectedState, selectedStatus]);
+
+  // Statistics calculation
+  const stats = useMemo(() => {
+    const totalReports = 1248 + reports.length - 20;
+    const verifiedCount = reports.filter((r) => r.status === 'Verified').length;
+    const verifiedRate = reports.length > 0
+      ? ((verifiedCount / reports.length) * 100).toFixed(1)
+      : '71.4';
+    
+    const uniqueLocations = new Set(reports.map((r) => r.state || r.location)).size;
+
+    // Most reported event calculation
+    const counts = {};
+    reports.forEach((r) => {
+      counts[r.eventType] = (counts[r.eventType] || 0) + 1;
+    });
+    let mostReported = 'Heavy Rain';
+    let maxCount = 0;
+    Object.entries(counts).forEach(([type, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        mostReported = type;
+      }
+    });
+
+    return {
+      totalReports,
+      verifiedCount: 892 + (verifiedCount - 15),
+      verifiedRate,
+      activeLocations: uniqueLocations,
+      mostReported
+    };
+  }, [reports]);
+
+  const handleSelectReport = (report) => {
+    setSelectedReport(report);
+    if (report.latitude && report.longitude) {
+      setMapCenter([report.latitude, report.longitude]);
+      setMapZoom(9);
+    }
+  };
+
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setSelectedEventType('All');
+    setSelectedState('All');
+    setSelectedStatus('All');
+  };
+
+  const hasActiveFilters =
+    searchQuery !== '' ||
+    selectedEventType !== 'All' ||
+    selectedState !== 'All' ||
+    selectedStatus !== 'All';
+
+  return (
+    <div className="w-full px-4 md:px-margin-desktop py-6 max-w-container-max mx-auto flex flex-col gap-6">
+      
+      {/* 1. HEADER */}
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-outline-variant pb-4">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-3">
+            <h1 className="font-headline-lg text-headline-lg text-primary">
+              Live Weather Reports
+            </h1>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-secondary/10 border border-secondary/20 text-secondary font-mono-md text-xs font-bold">
+              <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
+              LIVE
+            </div>
+          </div>
+          <p className="font-body-md text-on-surface-variant">
+            Citizen-reported weather events and verified observations across India.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="text-right hidden sm:block">
+            <span className="block font-mono-md text-xs text-outline">Telemetry Sync</span>
+            <span className="font-body-sm text-xs font-semibold text-primary">Updated just now</span>
+          </div>
+          <Link
+            to="/report"
+            className="bg-primary text-on-primary font-label-md text-label-md px-4 py-2.5 rounded hover:bg-primary-container transition-colors flex items-center gap-2 whitespace-nowrap shadow-sm"
+          >
+            <span className="material-symbols-outlined text-sm">add_circle</span>
+            Submit Report
+          </Link>
+        </div>
+      </header>
+
+      {/* 2. PLATFORM STATISTICS */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Stat 1 */}
+        <div className="bg-surface border border-outline-variant rounded flex flex-col">
+          <div className="bg-surface-container-lowest px-4 py-2.5 border-b border-outline-variant rounded-t">
+            <h3 className="font-label-md text-xs text-on-surface-variant uppercase tracking-wider">
+              Reports Today
+            </h3>
+          </div>
+          <div className="p-4 flex items-end justify-between">
+            <span className="font-mono-md text-3xl font-bold text-primary">
+              {stats.totalReports.toLocaleString()}
+            </span>
+            <span className="font-body-sm text-xs text-secondary font-semibold flex items-center">
+              <span className="material-symbols-outlined text-sm">arrow_upward</span> 12%
+            </span>
+          </div>
+        </div>
+
+        {/* Stat 2 */}
+        <div className="bg-surface border border-outline-variant rounded flex flex-col">
+          <div className="bg-surface-container-lowest px-4 py-2.5 border-b border-outline-variant rounded-t">
+            <h3 className="font-label-md text-xs text-on-surface-variant uppercase tracking-wider">
+              Verified Events
+            </h3>
+          </div>
+          <div className="p-4 flex items-end justify-between">
+            <span className="font-mono-md text-3xl font-bold text-primary">
+              {stats.verifiedCount.toLocaleString()}
+            </span>
+            <span className="font-body-sm text-xs text-on-surface-variant font-medium">
+              {stats.verifiedRate}% Rate
+            </span>
+          </div>
+        </div>
+
+        {/* Stat 3 */}
+        <div className="bg-surface border border-outline-variant rounded flex flex-col">
+          <div className="bg-surface-container-lowest px-4 py-2.5 border-b border-outline-variant rounded-t">
+            <h3 className="font-label-md text-xs text-on-surface-variant uppercase tracking-wider">
+              Active Locations
+            </h3>
+          </div>
+          <div className="p-4 flex items-end justify-between">
+            <span className="font-mono-md text-3xl font-bold text-primary">
+              {stats.activeLocations}
+            </span>
+            <span className="font-body-sm text-xs text-on-surface-variant">
+              States / UTs
+            </span>
+          </div>
+        </div>
+
+        {/* Stat 4 */}
+        <div className="bg-surface border border-outline-variant rounded flex flex-col">
+          <div className="bg-surface-container-lowest px-4 py-2.5 border-b border-outline-variant rounded-t">
+            <h3 className="font-label-md text-xs text-on-surface-variant uppercase tracking-wider">
+              Most Reported Event
+            </h3>
+          </div>
+          <div className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-error/10 flex items-center justify-center text-error">
+                <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
+                  water_drop
+                </span>
+              </div>
+              <span className="font-headline-sm text-lg text-primary font-bold">
+                {stats.mostReported}
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. FILTER BAR & VIEW TOGGLE */}
+      <section className="bg-surface border border-outline-variant rounded p-3 flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between shadow-sm">
+        {/* Search & Selectors */}
+        <div className="flex flex-wrap gap-2 flex-grow items-center">
+          {/* Search Input */}
+          <div className="relative flex-grow min-w-[200px]">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">
+              search
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search city, state, description..."
+              className="w-full pl-10 pr-4 py-2 bg-surface-container-lowest border border-outline-variant rounded font-body-sm text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            />
+          </div>
+
+          {/* Event Type Filter */}
+          <select
+            value={selectedEventType}
+            onChange={(e) => setSelectedEventType(e.target.value)}
+            className="py-2 px-3 bg-surface-container-lowest border border-outline-variant rounded font-body-sm text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="All">Event Type: All</option>
+            {EVENT_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+
+          {/* State Filter */}
+          <select
+            value={selectedState}
+            onChange={(e) => setSelectedState(e.target.value)}
+            className="py-2 px-3 bg-surface-container-lowest border border-outline-variant rounded font-body-sm text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="All">State: All</option>
+            {uniqueStates.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+
+          {/* Status Filter */}
+          <select
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            className="py-2 px-3 bg-surface-container-lowest border border-outline-variant rounded font-body-sm text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="All">Status: All</option>
+            {STATUS_OPTIONS.map((st) => (
+              <option key={st} value={st}>
+                {st}
+              </option>
+            ))}
+          </select>
+
+          {/* Reset Filters */}
+          {hasActiveFilters && (
+            <button
+              onClick={handleResetFilters}
+              className="py-2 px-3 bg-surface-container text-primary hover:bg-surface-variant rounded font-body-sm text-xs font-semibold flex items-center gap-1 transition-colors"
+            >
+              <span className="material-symbols-outlined text-xs">close</span>
+              Clear
+            </button>
+          )}
+        </div>
+
+        {/* View Toggle Buttons */}
+        <div className="flex items-center bg-surface-container-lowest border border-outline-variant rounded p-1 self-end lg:self-auto shrink-0">
+          <button
+            onClick={() => setActiveTab('map')}
+            className={`px-3 py-1.5 rounded font-label-md text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+              activeTab === 'map'
+                ? 'bg-primary text-on-primary'
+                : 'text-on-surface-variant hover:text-primary'
+            }`}
+          >
+            <span className="material-symbols-outlined text-sm">map</span>
+            Map View
+          </button>
+          <button
+            onClick={() => setActiveTab('table')}
+            className={`px-3 py-1.5 rounded font-label-md text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+              activeTab === 'table'
+                ? 'bg-primary text-on-primary'
+                : 'text-on-surface-variant hover:text-primary'
+            }`}
+          >
+            <span className="material-symbols-outlined text-sm">table_rows</span>
+            Table View
+          </button>
+        </div>
+      </section>
+
+      {/* 4 & 5. CORE CONTENT: MAP VIEW vs TABLE VIEW */}
+      {activeTab === 'map' ? (
+        <section className="flex flex-col lg:flex-row gap-6 items-stretch">
+          {/* Main Map Container (65% width on desktop) */}
+          <div className="w-full lg:w-[65%] bg-surface border border-outline-variant rounded relative flex flex-col overflow-hidden h-[540px] shadow-sm">
+            {/* Map Top Bar */}
+            <div className="bg-surface-container-lowest px-4 py-2 border-b border-outline-variant flex justify-between items-center z-10">
+              <h2 className="font-label-md text-xs text-on-surface-variant uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm text-primary">public</span>
+                Geospatial Overview ({filteredReports.length} reports mapped)
+              </h2>
+              <button
+                onClick={() => {
+                  setMapCenter([22.5, 79.5]);
+                  setMapZoom(5);
+                }}
+                className="font-mono-md text-xs text-primary hover:underline flex items-center gap-1"
+              >
+                <span className="material-symbols-outlined text-xs">center_focus_strong</span>
+                Reset India View
+              </button>
+            </div>
+
+            {/* Interactive Leaflet Map */}
+            <div className="flex-grow relative z-0">
+              <MapContainer
+                center={mapCenter}
+                zoom={mapZoom}
+                style={{ height: '100%', width: '100%' }}
+                scrollWheelZoom={true}
+              >
+                <MapViewController center={mapCenter} zoom={mapZoom} />
+                <TileLayer
+                  attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
+                  url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                />
+
+                {filteredReports.map((report) => (
+                  <Marker
+                    key={report.id}
+                    position={[report.latitude, report.longitude]}
+                    icon={createCustomMarkerIcon(report.eventType, report.status)}
+                  >
+                    <Popup className="weatherwatch-map-popup">
+                      <div className="p-1 min-w-[200px] flex flex-col gap-1.5 font-sans">
+                        <div className="flex items-center justify-between border-b border-outline-variant pb-1">
+                          <span
+                            className="font-bold text-xs"
+                            style={{ color: getEventMarkerColor(report.eventType) }}
+                          >
+                            {report.eventType}
+                          </span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold border ${getStatusBadgeStyle(report.status)}`}>
+                            {report.status}
+                          </span>
+                        </div>
+
+                        <div className="font-medium text-xs text-on-surface">
+                          {report.location}
+                        </div>
+
+                        <div className="text-[11px] text-on-surface-variant line-clamp-2">
+                          {report.description}
+                        </div>
+
+                        <div className="flex justify-between items-center text-[10px] text-outline pt-1">
+                          <span>{report.createdAt || 'Recent'}</span>
+                          <span className="font-mono-md">Conf: {report.confidence}</span>
+                        </div>
+
+                        <button
+                          onClick={() => setSelectedReport(report)}
+                          className="mt-1 w-full bg-primary text-on-primary text-xs py-1 rounded hover:bg-primary-container transition-colors text-center"
+                        >
+                          View Full Details
+                        </button>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+            </div>
+
+            {/* Event Legend Overlay */}
+            <div className="absolute bottom-3 left-3 bg-surface/95 border border-outline-variant rounded p-2.5 shadow-md backdrop-blur-sm z-[400] max-w-xs">
+              <h4 className="font-label-md text-[10px] text-on-surface-variant uppercase tracking-wider mb-1.5 font-bold">
+                Event Legend
+              </h4>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1 font-body-sm text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#1960a3' }} /> Rain
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#002045' }} /> Flood
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#6b21a8' }} /> Thunder
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#ba1a1a' }} /> Heatwave
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#74777f' }} /> Fog
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#c6955e' }} /> Dust Storm
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Reports Live Feed Panel (35% width on desktop) */}
+          <div className="w-full lg:w-[35%] bg-surface border border-outline-variant rounded flex flex-col h-[540px] shadow-sm overflow-hidden">
+            <div className="bg-surface-container-lowest px-4 py-3 border-b border-outline-variant flex justify-between items-center shrink-0">
+              <h2 className="font-label-md text-xs text-on-surface-variant uppercase tracking-wider font-semibold">
+                Recent Reports Feed
+              </h2>
+              <span className="font-mono-md text-xs text-primary bg-primary/10 px-2 py-0.5 rounded font-bold">
+                {filteredReports.length} Live Items
+              </span>
+            </div>
+
+            <div className="flex-grow overflow-y-auto divide-y divide-outline-variant">
+              {filteredReports.length === 0 ? (
+                <div className="p-8 text-center text-on-surface-variant flex flex-col items-center justify-center h-full">
+                  <span className="material-symbols-outlined text-4xl text-outline mb-2">filter_alt_off</span>
+                  <p className="font-headline-sm text-sm text-primary mb-1">No reports match filter</p>
+                  <button
+                    onClick={handleResetFilters}
+                    className="text-xs text-secondary underline mt-2"
+                  >
+                    Reset all filters
+                  </button>
+                </div>
+              ) : (
+                filteredReports.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => handleSelectReport(item)}
+                    className="p-3.5 hover:bg-surface-container-low transition-colors cursor-pointer flex gap-3 items-start group"
+                  >
+                    <div
+                      className="w-9 h-9 rounded flex items-center justify-center shrink-0 font-bold"
+                      style={{
+                        backgroundColor: `${getEventMarkerColor(item.eventType)}15`,
+                        color: getEventMarkerColor(item.eventType)
+                      }}
+                    >
+                      <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
+                        {item.eventType === 'Heatwave' ? 'thermostat' : item.eventType === 'Flood' ? 'flood' : item.eventType === 'Fog' ? 'foggy' : 'water_drop'}
+                      </span>
+                    </div>
+
+                    <div className="flex-grow min-w-0">
+                      <div className="flex justify-between items-start">
+                        <h4 className="font-headline-sm text-sm font-semibold text-on-surface truncate group-hover:text-primary transition-colors">
+                          {item.eventType}
+                        </h4>
+                        <span className="font-mono-md text-[11px] text-outline shrink-0 ml-2">
+                          {item.createdAt || 'Recent'}
+                        </span>
+                      </div>
+
+                      <p className="font-body-sm text-xs text-on-surface-variant mt-0.5 flex items-center gap-1 truncate">
+                        <span className="material-symbols-outlined text-[13px] text-outline">location_on</span>
+                        {item.location}
+                      </p>
+
+                      <div className="mt-2 flex items-center justify-between">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded font-label-md text-[10px] font-semibold border ${getStatusBadgeStyle(item.status)}`}>
+                          <span className="material-symbols-outlined text-[11px]">
+                            {item.status === 'Verified' ? 'verified' : item.status === 'Pending' ? 'pending' : 'info'}
+                          </span>
+                          {item.status}
+                        </span>
+
+                        <span className="font-mono-md text-[11px] text-outline">
+                          Conf: {item.confidence}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </section>
+      ) : (
+        /* 6. TABULAR DATA LOG VIEW */
+        <section className="bg-surface border border-outline-variant rounded overflow-hidden shadow-sm">
+          <div className="bg-surface-container-lowest px-4 py-3 border-b border-outline-variant flex justify-between items-center">
+            <h2 className="font-label-md text-xs text-on-surface-variant uppercase tracking-wider font-semibold">
+              Tabular Data Log ({filteredReports.length} entries)
+            </h2>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-surface-container-low font-label-md text-xs text-on-surface-variant uppercase tracking-wider border-b border-outline-variant">
+                  <th className="py-3 px-4">Event Type</th>
+                  <th className="py-3 px-4">Location</th>
+                  <th className="py-3 px-4">State</th>
+                  <th className="py-3 px-4">Reported</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Confidence</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="font-body-sm text-sm text-on-surface divide-y divide-outline-variant">
+                {filteredReports.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-on-surface-variant">
+                      No reports match the current criteria.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredReports.map((item) => (
+                    <tr key={item.id} className="hover:bg-surface-container-low transition-colors">
+                      <td className="py-3 px-4 font-semibold text-primary flex items-center gap-2">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full"
+                          style={{ backgroundColor: getEventMarkerColor(item.eventType) }}
+                        />
+                        {item.eventType}
+                      </td>
+                      <td className="py-3 px-4 max-w-xs truncate">{item.location}</td>
+                      <td className="py-3 px-4 text-on-surface-variant">{item.state || 'India'}</td>
+                      <td className="py-3 px-4 font-mono-md text-xs text-outline">
+                        {item.createdAt || 'Recent'}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-0.5 rounded font-label-md text-[10px] font-semibold border ${getStatusBadgeStyle(item.status)}`}>
+                          {item.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-mono-md text-xs">{item.confidence}</td>
+                      <td className="py-3 px-4 text-right">
+                        <button
+                          onClick={() => setSelectedReport(item)}
+                          className="text-primary hover:underline font-semibold text-xs"
+                        >
+                          Details
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* 7. REPORT DETAILS MODAL / DRAWER */}
+      {selectedReport && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-on-surface/50 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-surface border border-outline-variant rounded-lg shadow-xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="bg-surface-container-lowest px-5 py-4 border-b border-outline-variant flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <span
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: getEventMarkerColor(selectedReport.eventType) }}
+                />
+                <h3 className="font-headline-md text-base font-bold text-primary">
+                  {selectedReport.eventType} Report Details
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedReport(null)}
+                className="text-on-surface-variant hover:text-primary p-1 rounded transition-colors"
+              >
+                <span className="material-symbols-outlined text-xl">close</span>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 overflow-y-auto flex flex-col gap-4">
+              {/* Photo preview if present */}
+              {selectedReport.photoPreview && (
+                <div className="w-full h-44 rounded border border-outline-variant overflow-hidden bg-surface-container relative">
+                  <img
+                    src={selectedReport.photoPreview}
+                    alt={selectedReport.eventType}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+
+              {/* Badges row */}
+              <div className="flex flex-wrap items-center justify-between gap-2 bg-surface-container-low p-3 rounded border border-outline-variant font-mono-md text-xs">
+                <div>
+                  <span className="text-outline uppercase text-[10px] mr-1">Report ID:</span>
+                  <span className="font-bold text-primary">{selectedReport.id}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-0.5 rounded font-semibold border ${getStatusBadgeStyle(selectedReport.status)}`}>
+                    {selectedReport.status}
+                  </span>
+                  <span className="text-on-surface">Conf: {selectedReport.confidence}</span>
+                </div>
+              </div>
+
+              {/* Location & Time */}
+              <div className="flex flex-col gap-1">
+                <span className="font-label-md text-xs text-outline uppercase tracking-wider">
+                  Location & Coordinates
+                </span>
+                <p className="font-body-md text-sm text-on-surface font-medium">
+                  {selectedReport.location}
+                </p>
+                <p className="font-mono-md text-xs text-outline">
+                  LAT: {selectedReport.latitude?.toFixed(4)}° N, LNG: {selectedReport.longitude?.toFixed(4)}° E
+                </p>
+              </div>
+
+              {/* Description */}
+              <div className="flex flex-col gap-1">
+                <span className="font-label-md text-xs text-outline uppercase tracking-wider">
+                  Observation Description
+                </span>
+                <p className="font-body-md text-sm text-on-surface bg-surface-container-low p-3 rounded border border-outline-variant">
+                  {selectedReport.description}
+                </p>
+              </div>
+
+              {/* Reporter & Time */}
+              <div className="flex justify-between items-center text-xs text-outline pt-2 border-t border-outline-variant font-mono-md">
+                <span>Reporter: {selectedReport.reporterName || 'Anonymous'}</span>
+                <span>{selectedReport.date || selectedReport.createdAt}</span>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="bg-surface-container-lowest p-4 border-t border-outline-variant flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setSelectedReport(null);
+                  setActiveTab('map');
+                  if (selectedReport.latitude && selectedReport.longitude) {
+                    setMapCenter([selectedReport.latitude, selectedReport.longitude]);
+                    setMapZoom(10);
+                  }
+                }}
+                className="bg-primary text-on-primary px-4 py-2 rounded font-label-md text-xs font-semibold hover:bg-primary-container transition-colors flex items-center gap-1.5"
+              >
+                <span className="material-symbols-outlined text-sm">location_on</span>
+                Focus on Map
+              </button>
+              <button
+                onClick={() => setSelectedReport(null)}
+                className="border border-outline-variant text-on-surface px-4 py-2 rounded font-label-md text-xs font-semibold hover:bg-surface-container transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FOOTER NOTE */}
+      <div className="text-center text-xs text-outline py-2">
+        <p>
+          * Platform Demonstration Mode: Real-time public submissions are automatically aggregated into local state.
         </p>
       </div>
     </div>

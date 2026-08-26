@@ -1,0 +1,414 @@
+// Centralized Local Reports Store & Pre-populated Demo Data for WeatherWatch
+
+export const INITIAL_REPORTS = [
+  {
+    id: 'RPT-8492-AX',
+    eventType: 'Heavy Rain',
+    location: 'Mumbai, Maharashtra',
+    state: 'Maharashtra',
+    latitude: 19.0760,
+    longitude: 72.8777,
+    description: 'Torrential downpour causing urban waterlogging near Dadar and lower Parel areas.',
+    reporterName: 'Rajesh Kumar',
+    createdAt: '8 min ago',
+    date: 'Today, 14:24 IST',
+    status: 'Verified',
+    confidence: '98.5%',
+    photoPreview: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA_YTlJjqu4Xj4aIcr0C-sDX2RVE4bGqkxXSWXJKBzELRwdbZG_TdzjC03zwgBdrELDuPHBQi8uEPTKrlGkktBnzFca1oTet4V8qT3eQdgrVLFLsBeaO6JXFU0f40v77g8L3MwTwaxbsiKkXMSYrTAa-H1QnyZuNsc0NdEtbcMsjB_C_-0pzOL482kyVCurn6Us72ATICboWwcRtgmeRb-WEDw7ZmANfZK3DDnxyY8UCf1nrFJAgxxCUQ'
+  },
+  {
+    id: 'RPT-7310-GA',
+    eventType: 'Flood',
+    location: 'Guwahati, Assam',
+    state: 'Assam',
+    latitude: 26.1445,
+    longitude: 91.7362,
+    description: 'Brahmaputra river water overflow affecting low-lying residential wards.',
+    reporterName: 'Anil Sarma',
+    createdAt: '15 min ago',
+    date: 'Today, 14:17 IST',
+    status: 'Verified',
+    confidence: '96.2%',
+    photoPreview: null
+  },
+  {
+    id: 'RPT-9104-JP',
+    eventType: 'Heatwave',
+    location: 'Jaipur, Rajasthan',
+    state: 'Rajasthan',
+    latitude: 26.9124,
+    longitude: 75.7873,
+    description: 'Severe heatwave condition with peak temperature reaching 44.5°C.',
+    reporterName: 'Sunita Sharma',
+    createdAt: '22 min ago',
+    date: 'Today, 14:10 IST',
+    status: 'Verified',
+    confidence: '99.0%',
+    photoPreview: null
+  },
+  {
+    id: 'RPT-6022-DL',
+    eventType: 'Fog',
+    location: 'Connaught Place, Delhi',
+    state: 'Delhi',
+    latitude: 28.6139,
+    longitude: 77.2090,
+    description: 'Dense morning fog lowering visibility below 100 meters across central Delhi.',
+    reporterName: 'Vikram Singh',
+    createdAt: '35 min ago',
+    date: 'Today, 13:57 IST',
+    status: 'Verified',
+    confidence: '88.5%',
+    photoPreview: null
+  },
+  {
+    id: 'RPT-5140-WB',
+    eventType: 'Thunderstorm',
+    location: 'Kolkata, West Bengal',
+    state: 'West Bengal',
+    latitude: 22.5726,
+    longitude: 88.3639,
+    description: 'Squall line with lightning strikes and heavy localized showers in Salt Lake.',
+    reporterName: 'Debabrata Das',
+    createdAt: '42 min ago',
+    date: 'Today, 13:50 IST',
+    status: 'Verified',
+    confidence: '91.4%',
+    photoPreview: null
+  },
+  {
+    id: 'RPT-4091-TN',
+    eventType: 'Heavy Rain',
+    location: 'Chennai, Tamil Nadu',
+    state: 'Tamil Nadu',
+    latitude: 13.0827,
+    longitude: 80.2707,
+    description: 'Northeast monsoon surge bringing continuous heavy rainfall across coastal belts.',
+    reporterName: 'Karthik Subramanian',
+    createdAt: '1 hour ago',
+    date: 'Today, 13:30 IST',
+    status: 'Verified',
+    confidence: '85.0%',
+    photoPreview: null
+  },
+  {
+    id: 'RPT-3280-KA',
+    eventType: 'Strong Wind',
+    location: 'Bengaluru, Karnataka',
+    state: 'Karnataka',
+    latitude: 12.9716,
+    longitude: 77.5946,
+    description: 'High velocity gusty winds recorded near MG Road causing minor tree branch falls.',
+    reporterName: 'Priya Nair',
+    createdAt: '1 hour ago',
+    date: 'Today, 13:22 IST',
+    status: 'Verified',
+    confidence: '82.6%',
+    photoPreview: null
+  },
+  {
+    id: 'RPT-2941-GJ',
+    eventType: 'Heatwave',
+    location: 'Ahmedabad, Gujarat',
+    state: 'Gujarat',
+    latitude: 23.0225,
+    longitude: 72.5714,
+    description: 'Extreme thermal conditions. Yellow alert issued for public health advisories.',
+    reporterName: 'Harsh Patel',
+    createdAt: '2 hours ago',
+    date: 'Today, 12:45 IST',
+    status: 'Verified',
+    confidence: '96.4%',
+    photoPreview: null
+  },
+  {
+    id: 'RPT-1850-JK',
+    eventType: 'Fog',
+    location: 'Srinagar, Jammu and Kashmir',
+    state: 'Jammu and Kashmir',
+    latitude: 34.0837,
+    longitude: 74.7973,
+    description: 'Dense cold mist and low ceiling cloud cover around Dal Lake area.',
+    reporterName: 'Tariq Bhat',
+    createdAt: '2 hours ago',
+    date: 'Today, 12:15 IST',
+    status: 'Pending',
+    confidence: '73.1%',
+    photoPreview: null
+  },
+  {
+    id: 'RPT-8831-KL',
+    eventType: 'Heavy Rain',
+    location: 'Kochi, Kerala',
+    state: 'Kerala',
+    latitude: 9.9312,
+    longitude: 76.2673,
+    description: 'Monsoon downpour over coastal harbor zone causing temporary drainage backup.',
+    reporterName: 'Mathew George',
+    createdAt: '3 hours ago',
+    date: 'Today, 11:30 IST',
+    status: 'Verified',
+    confidence: '93.8%',
+    photoPreview: null
+  },
+  {
+    id: 'RPT-7742-BR',
+    eventType: 'Flood',
+    location: 'Patna, Bihar',
+    state: 'Bihar',
+    latitude: 25.5941,
+    longitude: 85.1376,
+    description: 'Water accumulation along low embankment zones near Ganga ghats.',
+    reporterName: 'Ravi Prasad',
+    createdAt: '3 hours ago',
+    date: 'Today, 11:10 IST',
+    status: 'Pending',
+    confidence: '68.4%',
+    photoPreview: null
+  },
+  {
+    id: 'RPT-6619-OR',
+    eventType: 'Thunderstorm',
+    location: 'Bhubaneswar, Odisha',
+    state: 'Odisha',
+    latitude: 20.2961,
+    longitude: 85.8245,
+    description: 'Pre-monsoon thundershowers with lightning and sudden wind gusts.',
+    reporterName: 'Subhashree Mohanty',
+    createdAt: '4 hours ago',
+    date: 'Today, 10:40 IST',
+    status: 'Verified',
+    confidence: '90.2%',
+    photoPreview: null
+  },
+  {
+    id: 'RPT-5520-MH',
+    eventType: 'Heavy Rain',
+    location: 'Pune, Maharashtra',
+    state: 'Maharashtra',
+    latitude: 18.5204,
+    longitude: 73.8567,
+    description: 'Moderate to heavy showers in Kothrud and Baner area.',
+    reporterName: 'Amit Deshmukh',
+    createdAt: '4 hours ago',
+    date: 'Today, 10:20 IST',
+    status: 'Pending',
+    confidence: '62.0%',
+    photoPreview: null
+  },
+  {
+    id: 'RPT-4431-TS',
+    eventType: 'Heatwave',
+    location: 'Hyderabad, Telangana',
+    state: 'Telangana',
+    latitude: 17.3850,
+    longitude: 78.4867,
+    description: 'Elevated daytime temperatures reaching 41.8°C.',
+    reporterName: 'Srinivas Reddy',
+    createdAt: '5 hours ago',
+    date: 'Today, 09:30 IST',
+    status: 'Verified',
+    confidence: '94.7%',
+    photoPreview: null
+  },
+  {
+    id: 'RPT-3322-RJ',
+    eventType: 'Dust Storm',
+    location: 'Jodhpur, Rajasthan',
+    state: 'Rajasthan',
+    latitude: 26.2389,
+    longitude: 73.0243,
+    description: 'Strong desert winds causing dust haze and reduced optical clarity.',
+    reporterName: 'Mahendra Singh',
+    createdAt: '6 hours ago',
+    date: 'Today, 08:50 IST',
+    status: 'Verified',
+    confidence: '95.1%',
+    photoPreview: null
+  },
+  {
+    id: 'RPT-2213-HP',
+    eventType: 'Fog',
+    location: 'Shimla, Himachal Pradesh',
+    state: 'Himachal Pradesh',
+    latitude: 31.1048,
+    longitude: 77.1734,
+    description: 'Thick mountain fog covering Ridge road and Mall road.',
+    reporterName: 'Deepak Sharma',
+    createdAt: '7 hours ago',
+    date: 'Today, 07:40 IST',
+    status: 'Verified',
+    confidence: '89.0%',
+    photoPreview: null
+  },
+  {
+    id: 'RPT-1104-AP',
+    eventType: 'Strong Wind',
+    location: 'Visakhapatnam, Andhra Pradesh',
+    state: 'Andhra Pradesh',
+    latitude: 17.6868,
+    longitude: 83.2185,
+    description: 'Coastal wind turbulence recorded near RK Beach promenade.',
+    reporterName: 'Venkat Rao',
+    createdAt: '8 hours ago',
+    date: 'Today, 06:30 IST',
+    status: 'Pending',
+    confidence: '74.5%',
+    photoPreview: null
+  },
+  {
+    id: 'RPT-9988-UP',
+    eventType: 'Thunderstorm',
+    location: 'Lucknow, Uttar Pradesh',
+    state: 'Uttar Pradesh',
+    latitude: 26.8467,
+    longitude: 80.9462,
+    description: 'Duplicate transmission recorded near Hazratganj.',
+    reporterName: 'Alok Gupta',
+    createdAt: '9 hours ago',
+    date: 'Today, 05:20 IST',
+    status: 'Duplicate',
+    confidence: '45.0%',
+    photoPreview: null
+  },
+  {
+    id: 'RPT-8877-PB',
+    eventType: 'Heavy Rain',
+    location: 'Amritsar, Punjab',
+    state: 'Punjab',
+    latitude: 31.6340,
+    longitude: 74.8723,
+    description: 'Report flagged as inaccurate due to sensor anomaly.',
+    reporterName: 'Gurpreet Singh',
+    createdAt: '10 hours ago',
+    date: 'Today, 04:15 IST',
+    status: 'Rejected',
+    confidence: '22.1%',
+    photoPreview: null
+  },
+  {
+    id: 'RPT-7766-MP',
+    eventType: 'Heatwave',
+    location: 'Bhopal, Madhya Pradesh',
+    state: 'Madhya Pradesh',
+    latitude: 23.2599,
+    longitude: 77.4126,
+    description: 'Dry spell with high temperature readings across MP central basin.',
+    reporterName: 'Sanjay Mishra',
+    createdAt: '11 hours ago',
+    date: 'Today, 03:00 IST',
+    status: 'Verified',
+    confidence: '92.0%',
+    photoPreview: null
+  }
+];
+
+const LOCAL_STORAGE_KEY = 'weatherwatch_reports';
+
+export function getStoredReports() {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (!raw) {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(INITIAL_REPORTS));
+      return INITIAL_REPORTS;
+    }
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(INITIAL_REPORTS));
+      return INITIAL_REPORTS;
+    }
+
+    // Normalize coordinates & status for all reports
+    return parsed.map((item) => ({
+      ...item,
+      latitude: item.latitude || extractLat(item.location) || 19.0760,
+      longitude: item.longitude || extractLng(item.location) || 72.8777,
+      state: item.state || extractState(item.location) || 'India',
+      status: item.status || 'Pending',
+      confidence: item.confidence || '78.5%'
+    }));
+  } catch (e) {
+    console.error('Error reading localStorage reports', e);
+    return INITIAL_REPORTS;
+  }
+}
+
+export function saveReportToStore(newReport) {
+  const current = getStoredReports();
+  // Ensure report has numeric lat/lng for map positioning
+  const lat = newReport.latitude || extractLat(newReport.location) || 19.0760 + (Math.random() - 0.5) * 0.1;
+  const lng = newReport.longitude || extractLng(newReport.location) || 72.8777 + (Math.random() - 0.5) * 0.1;
+
+  const normalized = {
+    ...newReport,
+    latitude: lat,
+    longitude: lng,
+    state: newReport.state || extractState(newReport.location) || 'Maharashtra',
+    status: newReport.status || 'Pending',
+    confidence: newReport.confidence || '82.0%',
+    createdAt: 'Just now',
+    date: `Today, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} IST`
+  };
+
+  const updated = [normalized, ...current];
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+  } catch (e) {
+    console.error('Error writing localStorage report', e);
+  }
+  return normalized;
+}
+
+export function getEventMarkerColor(eventType) {
+  switch (eventType) {
+    case 'Heavy Rain':
+      return '#1960a3';
+    case 'Flood':
+      return '#002045';
+    case 'Thunderstorm':
+      return '#6b21a8';
+    case 'Heatwave':
+      return '#ba1a1a';
+    case 'Fog':
+      return '#74777f';
+    case 'Dust Storm':
+      return '#c6955e';
+    case 'Strong Wind':
+      return '#0d9488';
+    default:
+      return '#1960a3';
+  }
+}
+
+export function getStatusBadgeStyle(status) {
+  switch (status) {
+    case 'Verified':
+      return 'bg-secondary/10 text-secondary border-secondary/20';
+    case 'Pending':
+      return 'bg-outline/10 text-outline border-outline/20';
+    case 'Rejected':
+      return 'bg-error/10 text-error border-error/20';
+    case 'Duplicate':
+      return 'bg-tertiary/10 text-tertiary-container border-tertiary/20';
+    default:
+      return 'bg-outline/10 text-outline border-outline/20';
+  }
+}
+
+function extractLat(locationStr) {
+  if (!locationStr) return null;
+  const match = locationStr.match(/([\d.]+)\s*°?\s*N/i);
+  return match ? parseFloat(match[1]) : null;
+}
+
+function extractLng(locationStr) {
+  if (!locationStr) return null;
+  const match = locationStr.match(/([\d.]+)\s*°?\s*E/i);
+  return match ? parseFloat(match[1]) : null;
+}
+
+function extractState(locationStr) {
+  if (!locationStr) return 'India';
+  const parts = locationStr.split(',');
+  return parts.length > 1 ? parts[parts.length - 1].trim() : 'India';
+}

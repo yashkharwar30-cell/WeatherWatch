@@ -338,7 +338,7 @@ export default function ReportPage() {
         {/* LEFT (FORM) */}
         <section className="lg:col-span-7 bg-surface-container-lowest p-6 rounded-lg border border-outline-variant shadow-sm flex flex-col gap-6">
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-            
+
             {/* Event Type */}
             <div className="flex flex-col gap-1">
               <label className="font-label-md text-label-md text-on-surface" htmlFor="eventType">
@@ -353,9 +353,8 @@ export default function ReportPage() {
                     setErrors((prev) => ({ ...prev, eventType: undefined }));
                   }
                 }}
-                className={`bg-surface-container-low border rounded p-3 font-body-md text-body-md text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none ${
-                  errors.eventType ? 'border-error ring-1 ring-error' : 'border-outline-variant'
-                }`}
+                className={`bg-surface-container-low border rounded p-3 font-body-md text-body-md text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none ${errors.eventType ? 'border-error ring-1 ring-error' : 'border-outline-variant'
+                  }`}
               >
                 <option value="" disabled>Select event type...</option>
                 {EVENT_TYPES.map((type) => (
@@ -389,9 +388,8 @@ export default function ReportPage() {
                     }
                   }}
                   placeholder="Enter street address, landmark, or coordinates"
-                  className={`flex-grow bg-surface-container-low border rounded p-3 font-body-md text-body-md text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none ${
-                    errors.location ? 'border-error ring-1 ring-error' : 'border-outline-variant'
-                  }`}
+                  className={`flex-grow bg-surface-container-low border rounded p-3 font-body-md text-body-md text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none ${errors.location ? 'border-error ring-1 ring-error' : 'border-outline-variant'
+                    }`}
                 />
                 <button
                   type="button"
@@ -429,9 +427,8 @@ export default function ReportPage() {
                   }
                 }}
                 placeholder="Describe the severity, damage, or current situation..."
-                className={`bg-surface-container-low border rounded p-3 font-body-md text-body-md text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none resize-y ${
-                  errors.description ? 'border-error ring-1 ring-error' : 'border-outline-variant'
-                }`}
+                className={`bg-surface-container-low border rounded p-3 font-body-md text-body-md text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none resize-y ${errors.description ? 'border-error ring-1 ring-error' : 'border-outline-variant'
+                  }`}
               />
               {errors.description && (
                 <span className="text-error text-xs font-body-sm mt-0.5 flex items-center gap-1">
@@ -456,13 +453,12 @@ export default function ReportPage() {
                   onDragLeave={() => setDragOver(false)}
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors text-center ${
-                    dragOver
+                  className={`border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors text-center ${dragOver
                       ? 'border-primary bg-primary/5'
                       : errors.photo
-                      ? 'border-error bg-error/5'
-                      : 'border-outline-variant bg-surface-container-low hover:bg-surface-container'
-                  }`}
+                        ? 'border-error bg-error/5'
+                        : 'border-outline-variant bg-surface-container-low hover:bg-surface-container'
+                    }`}
                 >
                   <span className="material-symbols-outlined text-4xl text-outline">
                     add_a_photo
