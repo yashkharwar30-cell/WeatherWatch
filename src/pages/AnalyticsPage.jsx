@@ -14,7 +14,7 @@ import {
 } from 'recharts';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
-import { getEventMarkerColor, getStatusBadgeStyle, getReportState } from '../utils/reportsStore';
+import { getEventMarkerColor, getStatusBadgeStyle, getReportState, getPrimaryLocationDisplay } from '../utils/reportsStore';
 
 const EVENT_TYPES = [
   'Heavy Rain',
@@ -595,8 +595,8 @@ export default function AnalyticsPage() {
                       <span className="font-headline-sm text-sm font-semibold text-on-surface truncate">
                         {item.eventType}
                       </span>
-                      <span className="font-body-sm text-xs text-on-surface-variant truncate">
-                        {getReportState(item)}
+                      <span className="font-body-sm text-xs text-on-surface-variant truncate font-medium">
+                        {getPrimaryLocationDisplay(item)}
                       </span>
                     </div>
                   </div>

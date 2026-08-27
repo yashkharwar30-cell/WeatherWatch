@@ -7,7 +7,8 @@ import {
   getEventMarkerColor,
   getStatusBadgeStyle,
   getAICategory,
-  getReportState
+  getReportState,
+  getPrimaryLocationDisplay
 } from '../utils/reportsStore';
 
 const EVENT_TYPES = [
@@ -103,7 +104,7 @@ export default function AdminDashboardPage() {
       },
       (err) => {
         console.error('Error fetching reports from Firestore:', err);
-        setError(`Failed to fetch reports from Firestore: ${err.message}`);
+        setError(`Failed to load reports. Please try again. (${err.message})`);
         setLoading(false);
       }
     );
@@ -192,7 +193,7 @@ export default function AdminDashboardPage() {
               <span className="font-headline-sm text-base text-on-surface font-semibold">Admin Triage</span>
               <span className="bg-secondary/10 text-secondary px-2.5 py-0.5 rounded-full font-mono-md text-[11px] font-bold border border-secondary/20 flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
-                FIRESTORE LIVE
+                LIVE
               </span>
             </div>
             <p className="font-body-sm text-xs text-on-surface-variant mt-0.5">
@@ -241,7 +242,7 @@ export default function AdminDashboardPage() {
               {metrics.total}
             </span>
             <span className="font-body-sm text-xs text-on-surface-variant">
-              Firestore DB
+              Live Data
             </span>
           </div>
         </div>
@@ -379,7 +380,7 @@ export default function AdminDashboardPage() {
           </div>
           <span className="font-mono-md text-xs text-outline flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
-            Live Firestore Sync
+            Live Updates
           </span>
         </div>
 
@@ -389,7 +390,7 @@ export default function AdminDashboardPage() {
             <span className="material-symbols-outlined text-4xl animate-spin text-primary">
               progress_activity
             </span>
-            <span className="font-body-md text-sm font-medium">Connecting to Firestore...</span>
+            <span className="font-body-md text-sm font-medium">Loading reports...</span>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -420,8 +421,8 @@ export default function AdminDashboardPage() {
                         </h3>
                         <p className="font-body-sm text-xs text-on-surface-variant mb-4">
                           {hasActiveFilters
-                            ? 'No Firestore reports match your selected search or filter criteria.'
-                            : 'There are currently no reports stored in the Firestore database.'}
+                            ? 'No reports match your current search or filter criteria.'
+                            : 'There are currently no reports submitted yet.'}
                         </p>
                         {hasActiveFilters && (
                           <button
@@ -459,7 +460,7 @@ export default function AdminDashboardPage() {
 
                         {/* Location / State */}
                         <td className="py-3 px-4">
-                          <div className="font-medium text-xs text-on-surface">{getReportState(report)}</div>
+                          <div className="font-medium text-xs text-on-surface font-semibold">{getPrimaryLocationDisplay(report)}</div>
                           {report.latitude && report.longitude && (
                             <div className="font-mono-md text-[10px] text-outline">
                               {Math.abs(report.latitude).toFixed(4)}° N, {Math.abs(report.longitude).toFixed(4)}° E
@@ -596,7 +597,7 @@ export default function AdminDashboardPage() {
 
               <div className="flex flex-col gap-1">
                 <span className="font-label-md text-[10px] text-outline uppercase tracking-wider">Location / State</span>
-                <span className="font-body-md text-sm text-on-surface font-medium">{getReportState(selectedReport)}</span>
+                <span className="font-body-md text-sm text-on-surface font-medium">{getPrimaryLocationDisplay(selectedReport)}</span>
                 {selectedReport.latitude && selectedReport.longitude && (
                   <span className="font-mono-md text-xs text-outline">
                     {Math.abs(selectedReport.latitude).toFixed(4)}° N, {Math.abs(selectedReport.longitude).toFixed(4)}° E

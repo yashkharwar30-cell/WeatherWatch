@@ -209,7 +209,7 @@ export default function HomePage() {
                 Live
               </span>
               <span className="font-label-md text-xs text-on-surface-variant uppercase tracking-wider font-semibold">
-                Firestore Sync
+                Live Updates
               </span>
             </div>
           </div>

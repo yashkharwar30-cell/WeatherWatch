@@ -228,7 +228,7 @@ export default function ReportPage() {
       const errorMessage = error?.message || (typeof error === 'string' ? error : 'Could not submit the report. Please try again.');
       setErrors((prev) => ({
         ...prev,
-        submit: `Firebase Error: ${errorMessage}`
+        submit: `Submission failed: ${errorMessage}`
       }));
     } finally {
       console.log('[ReportPage] Execution reached finally block. Resetting isSubmitting to false.');

@@ -345,7 +345,7 @@ export default function DashboardPage() {
             </h1>
           </div>
           <p className="font-body-md text-on-surface-variant">
-            Real-time citizen-reported weather events from Firestore. Only verified reports are shown publicly.
+            Real-time citizen-reported weather events across regions. Only verified reports are shown publicly.
           </p>
         </div>
 
@@ -365,7 +365,7 @@ export default function DashboardPage() {
       {firestoreError && (
         <div className="bg-error/10 border border-error text-error p-3 rounded-lg text-sm flex items-center gap-2">
           <span className="material-symbols-outlined text-base">error</span>
-          <span>Firestore connection error: {firestoreError}</span>
+          <span>Connection error: {firestoreError}</span>
         </div>
       )}
 
@@ -525,7 +525,7 @@ export default function DashboardPage() {
       {loading && (
         <div className="flex flex-col items-center justify-center py-20 gap-3 text-on-surface-variant">
           <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
-          <span className="font-body-md text-sm">Connecting to Firestore...</span>
+          <span className="font-body-md text-sm">Connecting to Live Stream...</span>
         </div>
       )}
 
@@ -744,7 +744,7 @@ export default function DashboardPage() {
             </h2>
             <span className="font-mono-md text-xs text-outline flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
-              Live Firestore
+              Live Updates
             </span>
           </div>
 
@@ -769,7 +769,7 @@ export default function DashboardPage() {
                         <span className="material-symbols-outlined text-4xl text-outline">inbox</span>
                         <p className="font-headline-sm text-sm text-primary font-bold">No verified reports</p>
                         <p className="font-body-sm text-xs">
-                          {hasActiveFilters ? 'No results for current filters.' : 'No verified reports in Firestore yet.'}
+                          {hasActiveFilters ? 'No results for current filters.' : 'No verified reports available yet.'}
                         </p>
                         {hasActiveFilters && (
                           <button onClick={handleResetFilters} className="text-xs text-secondary underline mt-1">
