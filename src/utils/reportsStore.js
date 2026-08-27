@@ -493,6 +493,15 @@ export function getReportState(report) {
   return 'Maharashtra';
 }
 
+export function getPrimaryLocationDisplay(report) {
+  if (!report) return 'India';
+  const state = getReportState(report);
+  if (report.location && typeof report.location === 'string' && !report.location.includes('°')) {
+    return report.location.trim();
+  }
+  return state;
+}
+
 function extractLat(locationStr) {
   if (!locationStr) return null;
   const match = locationStr.match(/([\d.]+)\s*°?\s*N/i);

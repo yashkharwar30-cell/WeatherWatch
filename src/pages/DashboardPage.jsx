@@ -7,7 +7,8 @@ import { db } from '../firebase';
 import {
   getEventMarkerColor,
   getStatusBadgeStyle,
-  getReportState
+  getReportState,
+  getPrimaryLocationDisplay
 } from '../utils/reportsStore';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -577,7 +578,7 @@ export default function DashboardPage() {
                           </span>
                         </div>
 
-                        <div className="font-medium text-xs text-gray-800">{getReportState(report)}</div>
+                        <div className="font-medium text-xs text-gray-800 font-semibold">{getPrimaryLocationDisplay(report)}</div>
 
                         {report.latitude && report.longitude && (
                           <div className="font-mono text-[10px] text-gray-500">
@@ -703,9 +704,9 @@ export default function DashboardPage() {
                         </span>
                       </div>
 
-                      <p className="font-body-sm text-xs text-on-surface-variant mt-0.5 flex items-center gap-1 truncate">
+                      <p className="font-body-sm text-xs text-on-surface-variant mt-0.5 flex items-center gap-1 truncate font-medium">
                         <span className="material-symbols-outlined text-[13px] text-outline">location_on</span>
-                        {getReportState(item)}
+                        {getPrimaryLocationDisplay(item)}
                       </p>
 
                       {item.latitude && item.longitude && (
@@ -766,7 +767,7 @@ export default function DashboardPage() {
                     <td colSpan={7} className="py-12 text-center">
                       <div className="flex flex-col items-center gap-2 text-on-surface-variant">
                         <span className="material-symbols-outlined text-4xl text-outline">inbox</span>
-                        <p className="font-headline-sm text-sm text-primary">No verified reports</p>
+                        <p className="font-headline-sm text-sm text-primary font-bold">No verified reports</p>
                         <p className="font-body-sm text-xs">
                           {hasActiveFilters ? 'No results for current filters.' : 'No verified reports in Firestore yet.'}
                         </p>
@@ -790,7 +791,7 @@ export default function DashboardPage() {
                           {item.eventType}
                         </div>
                       </td>
-                      <td className="py-3 px-4 max-w-[160px] truncate" title={getReportState(item)}>{getReportState(item)}</td>
+                      <td className="py-3 px-4 max-w-[160px] truncate font-medium" title={getPrimaryLocationDisplay(item)}>{getPrimaryLocationDisplay(item)}</td>
                       <td className="py-3 px-4 font-mono-md text-xs text-outline">
                         {item.latitude && item.longitude
                           ? `${item.latitude.toFixed(3)}°N, ${item.longitude.toFixed(3)}°E`
@@ -867,7 +868,7 @@ export default function DashboardPage() {
 
               <div className="flex flex-col gap-1">
                 <span className="font-label-md text-xs text-outline uppercase tracking-wider">Location & Coordinates</span>
-                <p className="font-body-md text-sm text-on-surface font-medium">{selectedReport.location || '—'}</p>
+                <p className="font-body-md text-sm text-on-surface font-medium">{getPrimaryLocationDisplay(selectedReport)}</p>
                 {selectedReport.latitude && selectedReport.longitude && (
                   <p className="font-mono-md text-xs text-outline">
                     LAT: {selectedReport.latitude.toFixed(4)}°N · LNG: {selectedReport.longitude.toFixed(4)}°E
