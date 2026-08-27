@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
+import { getStateFromCoords } from '../utils/reportsStore';
 
 // Custom Leaflet DivIcon for Selected Location Pin
 const createLocationPinIcon = (isGps) => {
@@ -227,19 +228,30 @@ export default function LocationPicker({ locationData, onChange, error }) {
       </div>
 
       {/* Compact Location Information Area (Below Map) */}
-      <div className="bg-surface-container-low border border-outline-variant rounded p-3 flex items-center justify-between gap-4 font-mono-md text-xs">
+      <div className="bg-surface-container-low border border-outline-variant rounded p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-mono-md text-xs">
         <div className="flex items-center gap-2">
           <span className="material-symbols-outlined text-primary text-base">pin_drop</span>
           <div>
-            <span className="text-outline uppercase text-[10px] block">Coordinates</span>
-            {locationData?.lat ? (
-              <span className="font-bold text-primary">
-                {formatLat(locationData.lat)}, {formatLng(locationData.lng)}
+            <span className="text-outline uppercase text-[10px] block">Location</span>
+            {locationData?.lat && locationData?.lng ? (
+              <span className="font-bold text-primary font-sans text-sm">
+                {getStateFromCoords(locationData.lat, locationData.lng)}
               </span>
             ) : (
-              <span className="text-outline font-normal">No coordinates selected</span>
+              <span className="text-outline font-normal">Not selected</span>
             )}
           </div>
+        </div>
+
+        <div>
+          <span className="text-outline uppercase text-[10px] block">Coordinates</span>
+          {locationData?.lat && locationData?.lng ? (
+            <span className="font-bold text-on-surface">
+              {formatLat(locationData.lat)}, {formatLng(locationData.lng)}
+            </span>
+          ) : (
+            <span className="text-outline font-normal">No coordinates</span>
+          )}
         </div>
 
         <div className="text-right">

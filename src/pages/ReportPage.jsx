@@ -1,7 +1,9 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import LocationPicker from '../components/LocationPicker';
-import { saveReportToStore } from '../utils/reportsStore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase';
+import { getStateFromCoords } from '../utils/reportsStore';
 
 const EVENT_TYPES = [
   'Heavy Rain',
@@ -41,6 +43,11 @@ export default function ReportPage() {
 
   // Submitted Report State
   const [submittedReport, setSubmittedReport] = useState(null);
+
+  // Detected State Name
+  const detectedState = useMemo(() => {
+    return getStateFromCoords(locationData.lat, locationData.lng);
+  }, [locationData]);
 
   // Formatted Coordinate String
   const formattedLocationString = useMemo(() => {
@@ -143,37 +150,90 @@ export default function ReportPage() {
   };
 
   // Submit Handler
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('[ReportPage] handleSubmit triggered');
 
-    if (!validateForm()) {
+    console.log('[ReportPage] Running validateForm()...');
+    const isValid = validateForm();
+    console.log('[ReportPage] validateForm() result:', isValid);
+
+    if (!isValid) {
+      console.log('[ReportPage] Form validation failed.');
       return;
     }
 
+    console.log('[ReportPage] Setting isSubmitting = true');
     setIsSubmitting(true);
+    setErrors((prev) => {
+      const updated = { ...prev };
+      delete updated.submit;
+      return updated;
+    });
 
-    setTimeout(() => {
-      const randomIdSuffix = Math.random().toString(36).substring(2, 4).toUpperCase();
+    try {
+      const randomIdSuffix = Math.random()
+        .toString(36)
+        .substring(2, 4)
+        .toUpperCase();
+
       const randomNum = Math.floor(1000 + Math.random() * 9000);
       const reportId = `RPT-${randomNum}-${randomIdSuffix}`;
+
+      const detectedStateName = getStateFromCoords(locationData.lat, locationData.lng);
 
       const newReport = {
         id: reportId,
         eventType,
-        location: formattedLocationString,
+        location: detectedStateName,
+        state: detectedStateName,
         latitude: locationData.lat,
         longitude: locationData.lng,
+        coordinates: formattedLocationString,
         description,
         reporterName: reporterName.trim() || 'Anonymous Citizen',
         photoPreview,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
+        date: new Date().toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        })
       };
 
-      const saved = saveReportToStore(newReport);
+      const firestoreDocData = {
+        id: reportId,
+        eventType,
+        location: detectedStateName,
+        state: detectedStateName,
+        latitude: locationData.lat,
+        longitude: locationData.lng,
+        description: description.trim(),
+        reporterName: reporterName.trim() || 'Anonymous Citizen',
+        createdAt: serverTimestamp(),
+        status: 'pending'
+      };
+
+      console.log('[ReportPage] Calling setDoc for reportId:', reportId, 'Data:', firestoreDocData);
+
+      await setDoc(doc(db, 'reports', reportId), firestoreDocData);
+
+      console.log('[ReportPage] setDoc completed successfully!');
+      setSubmittedReport(newReport);
+    } catch (error) {
+      console.error('[ReportPage] Error saving report to Firebase:', error);
+      const errorMessage = error?.message || (typeof error === 'string' ? error : 'Could not submit the report. Please try again.');
+      setErrors((prev) => ({
+        ...prev,
+        submit: `Firebase Error: ${errorMessage}`
+      }));
+    } finally {
+      console.log('[ReportPage] Execution reached finally block. Resetting isSubmitting to false.');
       setIsSubmitting(false);
-      setSubmittedReport(saved);
-    }, 800);
+    }
   };
 
   const handleReset = () => {
@@ -317,6 +377,12 @@ export default function ReportPage() {
         {/* LEFT (FORM) */}
         <section className="lg:col-span-7 bg-surface-container-lowest p-6 rounded-lg border border-outline-variant shadow-sm flex flex-col gap-6">
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+            {errors.submit && (
+              <div className="bg-error/10 border border-error text-error p-3 rounded font-body-md text-sm flex items-center gap-2">
+                <span className="material-symbols-outlined text-base">error</span>
+                {errors.submit}
+              </div>
+            )}
             
             {/* Event Type */}
             <div className="flex flex-col gap-1">

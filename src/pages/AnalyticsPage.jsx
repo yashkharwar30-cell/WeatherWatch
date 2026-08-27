@@ -12,7 +12,9 @@ import {
   CartesianGrid,
   Cell
 } from 'recharts';
-import { getStoredReports, getEventMarkerColor, getStatusBadgeStyle } from '../utils/reportsStore';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
+import { getEventMarkerColor, getStatusBadgeStyle, getReportState } from '../utils/reportsStore';
 
 const EVENT_TYPES = [
   'Heavy Rain',
@@ -35,15 +37,60 @@ export default function AnalyticsPage() {
   const [selectedEventType, setSelectedEventType] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
 
+  // Realtime Firestore listener
   useEffect(() => {
-    setReports(getStoredReports());
+    const reportsCollection = collection(db, 'reports');
+    const unsubscribe = onSnapshot(
+      reportsCollection,
+      (snapshot) => {
+        const fetched = snapshot.docs.map((docSnap) => {
+          const data = docSnap.data();
+          const rawStatus = (data.status || 'pending').toLowerCase();
+          const displayStatus =
+            rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
+
+          let formattedCreatedAt = 'Recent';
+          if (data.createdAt && typeof data.createdAt.toDate === 'function') {
+            formattedCreatedAt = data.createdAt.toDate().toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric'
+            });
+          } else if (data.createdAt && typeof data.createdAt === 'object' && data.createdAt.seconds) {
+            formattedCreatedAt = new Date(data.createdAt.seconds * 1000).toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric'
+            });
+          } else if (typeof data.createdAt === 'string') {
+            formattedCreatedAt = data.createdAt;
+          } else if (data.date || data.timestamp) {
+            formattedCreatedAt = `${data.date || ''} ${data.timestamp || ''}`.trim();
+          }
+
+          return {
+            id: docSnap.id,
+            ...data,
+            status: displayStatus,
+            rawStatus,
+            createdAtFormatted: formattedCreatedAt
+          };
+        });
+
+        setReports(fetched);
+      },
+      (err) => {
+        console.error('Error listening to Firestore in Analytics:', err);
+      }
+    );
+
+    return () => unsubscribe();
   }, []);
 
-  // Compute unique locations (states)
+  // Compute unique locations (states) alphabetically
   const uniqueStates = useMemo(() => {
     const set = new Set();
     reports.forEach((r) => {
-      if (r.state) set.add(r.state);
+      const st = getReportState(r);
+      if (st && !st.includes('°')) set.add(st);
     });
     return Array.from(set).sort();
   }, [reports]);
@@ -51,12 +98,13 @@ export default function AnalyticsPage() {
   // Filtered reports
   const filteredReports = useMemo(() => {
     return reports.filter((r) => {
+      const reportState = getReportState(r);
       const matchesLocation =
-        selectedLocation === 'All' || r.state === selectedLocation;
+        selectedLocation === 'All' || reportState === selectedLocation;
       const matchesType =
         selectedEventType === 'All' || r.eventType === selectedEventType;
       const matchesStatus =
-        selectedStatus === 'All' || r.status === selectedStatus;
+        selectedStatus === 'All' || r.status === selectedStatus || (r.rawStatus && r.rawStatus.toLowerCase() === selectedStatus.toLowerCase());
 
       return matchesLocation && matchesType && matchesStatus;
     });
@@ -65,10 +113,10 @@ export default function AnalyticsPage() {
   // 1. Summary Cards Calculation
   const summaryMetrics = useMemo(() => {
     const total = filteredReports.length;
-    const verified = filteredReports.filter((r) => r.status === 'Verified').length;
-    const pending = filteredReports.filter((r) => r.status === 'Pending').length;
+    const verified = filteredReports.filter((r) => r.rawStatus === 'verified' || r.status === 'Verified').length;
+    const pending = filteredReports.filter((r) => r.rawStatus === 'pending' || r.status === 'Pending').length;
     const rejected = filteredReports.filter(
-      (r) => r.status === 'Rejected' || r.status === 'Duplicate'
+      (r) => r.rawStatus === 'rejected' || r.status === 'Rejected' || r.rawStatus === 'duplicate' || r.status === 'Duplicate'
     ).length;
 
     const rate = total > 0 ? ((verified / total) * 100).toFixed(1) : '0.0';
@@ -102,7 +150,7 @@ export default function AnalyticsPage() {
     filteredReports.forEach((r) => {
       if (counts[r.eventType] !== undefined) {
         counts[r.eventType] += 1;
-      } else {
+      } else if (r.eventType) {
         counts[r.eventType] = (counts[r.eventType] || 0) + 1;
       }
     });
@@ -120,9 +168,11 @@ export default function AnalyticsPage() {
   const statusDistribution = useMemo(() => {
     const counts = { Verified: 0, Pending: 0, Rejected: 0, Duplicate: 0 };
     filteredReports.forEach((r) => {
-      if (counts[r.status] !== undefined) {
-        counts[r.status] += 1;
-      }
+      const s = (r.status || r.rawStatus || '').toLowerCase();
+      if (s === 'verified') counts.Verified += 1;
+      else if (s === 'rejected') counts.Rejected += 1;
+      else if (s === 'duplicate') counts.Duplicate += 1;
+      else counts.Pending += 1;
     });
 
     const total = filteredReports.length || 1;
@@ -137,8 +187,10 @@ export default function AnalyticsPage() {
   const regionalActivity = useMemo(() => {
     const counts = {};
     filteredReports.forEach((r) => {
-      const state = r.state || 'Other';
-      counts[state] = (counts[state] || 0) + 1;
+      const state = getReportState(r);
+      if (state && !state.includes('°')) {
+        counts[state] = (counts[state] || 0) + 1;
+      }
     });
 
     return Object.entries(counts)
@@ -544,7 +596,7 @@ export default function AnalyticsPage() {
                         {item.eventType}
                       </span>
                       <span className="font-body-sm text-xs text-on-surface-variant truncate">
-                        {item.state || item.location}
+                        {getReportState(item)}
                       </span>
                     </div>
                   </div>
@@ -554,7 +606,7 @@ export default function AnalyticsPage() {
                       {item.status}
                     </span>
                     <span className="font-mono-md text-[11px] text-outline mt-0.5">
-                      {item.createdAt || 'Recent'}
+                      {item.createdAtFormatted || 'Recent'}
                     </span>
                   </div>
                 </div>

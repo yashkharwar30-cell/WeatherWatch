@@ -381,18 +381,116 @@ export function getEventMarkerColor(eventType) {
 }
 
 export function getStatusBadgeStyle(status) {
-  switch (status) {
-    case 'Verified':
+  const normalized = (status || '').toLowerCase();
+  switch (normalized) {
+    case 'verified':
       return 'bg-secondary/10 text-secondary border-secondary/20';
-    case 'Pending':
+    case 'pending':
       return 'bg-outline/10 text-outline border-outline/20';
-    case 'Rejected':
+    case 'rejected':
       return 'bg-error/10 text-error border-error/20';
-    case 'Duplicate':
+    case 'duplicate':
       return 'bg-tertiary/10 text-tertiary-container border-tertiary/20';
     default:
       return 'bg-outline/10 text-outline border-outline/20';
   }
+}
+
+export function getStateFromCoords(lat, lng) {
+  if (lat == null || lng == null || isNaN(lat) || isNaN(lng)) return 'Maharashtra';
+  
+  // High-precision checks for major metro centers & regions
+  if (lat >= 18.8 && lat <= 19.4 && lng >= 72.7 && lng <= 73.2) return 'Maharashtra'; // Mumbai
+  if (lat >= 18.3 && lat <= 18.7 && lng >= 73.7 && lng <= 74.1) return 'Maharashtra'; // Pune
+  if (lat >= 15.6 && lat <= 22.1 && lng >= 72.6 && lng <= 80.9) return 'Maharashtra';
+
+  if (lat >= 28.4 && lat <= 28.9 && lng >= 76.9 && lng <= 77.4) return 'Delhi';
+  if (lat >= 26.8 && lat <= 27.1 && lng >= 75.7 && lng <= 76.0) return 'Rajasthan'; // Jaipur
+  if (lat >= 23.3 && lat <= 30.2 && lng >= 69.5 && lng <= 78.2) return 'Rajasthan';
+  
+  if (lat >= 22.9 && lat <= 23.2 && lng >= 72.4 && lng <= 72.7) return 'Gujarat'; // Ahmedabad
+  if (lat >= 20.1 && lat <= 24.7 && lng >= 68.1 && lng <= 74.5) return 'Gujarat';
+
+  if (lat >= 12.8 && lat <= 13.2 && lng >= 77.4 && lng <= 77.8) return 'Karnataka'; // Bengaluru
+  if (lat >= 11.5 && lat <= 18.5 && lng >= 74.0 && lng <= 78.5) return 'Karnataka';
+
+  if (lat >= 12.9 && lat <= 13.3 && lng >= 80.1 && lng <= 80.4) return 'Tamil Nadu'; // Chennai
+  if (lat >= 8.0 && lat <= 13.5 && lng >= 76.2 && lng <= 80.3) return 'Tamil Nadu';
+
+  if (lat >= 22.4 && lat <= 22.8 && lng >= 88.2 && lng <= 88.5) return 'West Bengal'; // Kolkata
+  if (lat >= 21.5 && lat <= 27.2 && lng >= 85.8 && lng <= 89.9) return 'West Bengal';
+
+  if (lat >= 26.0 && lat <= 26.3 && lng >= 91.6 && lng <= 91.9) return 'Assam'; // Guwahati
+  if (lat >= 24.1 && lat <= 28.0 && lng >= 89.7 && lng <= 96.0) return 'Assam';
+
+  if (lat >= 8.3 && lat <= 12.8 && lng >= 74.8 && lng <= 77.5) return 'Kerala';
+
+  if (lat >= 17.2 && lat <= 17.6 && lng >= 78.3 && lng <= 78.6) return 'Telangana'; // Hyderabad
+  if (lat >= 15.8 && lat <= 19.9 && lng >= 77.2 && lng <= 81.8) return 'Telangana';
+
+  if (lat >= 17.5 && lat <= 17.9 && lng >= 83.1 && lng <= 83.4) return 'Andhra Pradesh'; // Visakhapatnam
+  if (lat >= 12.6 && lat <= 19.1 && lng >= 76.8 && lng <= 84.8) return 'Andhra Pradesh';
+
+  if (lat >= 25.4 && lat <= 25.8 && lng >= 85.0 && lng <= 85.3) return 'Bihar'; // Patna
+  if (lat >= 24.3 && lat <= 27.5 && lng >= 83.3 && lng <= 88.3) return 'Bihar';
+
+  if (lat >= 20.1 && lat <= 20.5 && lng >= 85.7 && lng <= 86.0) return 'Odisha'; // Bhubaneswar
+  if (lat >= 17.8 && lat <= 22.5 && lng >= 81.4 && lng <= 87.5) return 'Odisha';
+
+  if (lat >= 26.7 && lat <= 27.0 && lng >= 80.8 && lng <= 81.1) return 'Uttar Pradesh'; // Lucknow
+  if (lat >= 23.9 && lat <= 30.4 && lng >= 77.1 && lng <= 84.6) return 'Uttar Pradesh';
+
+  if (lat >= 23.1 && lat <= 23.4 && lng >= 77.3 && lng <= 77.6) return 'Madhya Pradesh'; // Bhopal
+  if (lat >= 21.1 && lat <= 26.9 && lng >= 74.0 && lng <= 82.8) return 'Madhya Pradesh';
+
+  if (lat >= 31.5 && lat <= 31.8 && lng >= 74.7 && lng <= 75.0) return 'Punjab'; // Amritsar
+  if (lat >= 29.5 && lat <= 32.5 && lng >= 73.8 && lng <= 76.9) return 'Punjab';
+
+  if (lat >= 31.0 && lat <= 31.2 && lng >= 77.1 && lng <= 77.3) return 'Himachal Pradesh'; // Shimla
+  if (lat >= 30.4 && lat <= 33.3 && lng >= 75.6 && lng <= 79.0) return 'Himachal Pradesh';
+
+  if (lat >= 34.0 && lat <= 34.2 && lng >= 74.7 && lng <= 75.0) return 'Jammu and Kashmir'; // Srinagar
+  if (lat >= 32.3 && lat <= 37.0 && lng >= 73.4 && lng <= 80.5) return 'Jammu and Kashmir';
+
+  return 'Maharashtra';
+}
+
+export function getReportState(report) {
+  if (!report) return 'Maharashtra';
+
+  // 1. Explicit state field if valid text (not degree/coordinate)
+  if (report.state && typeof report.state === 'string' && !report.state.includes('°')) {
+    return report.state.trim();
+  }
+
+  // 2. City, State format in location string (e.g. "Mumbai, Maharashtra")
+  if (report.location && typeof report.location === 'string' && !report.location.includes('°')) {
+    const parts = report.location.split(',');
+    const candidate = parts[parts.length - 1].trim();
+    if (candidate && candidate !== 'India' && !candidate.includes('°')) {
+      return candidate;
+    }
+  }
+
+  // 3. Derive state from latitude & longitude
+  let lat = report.latitude;
+  let lng = report.longitude;
+
+  if ((lat == null || isNaN(lat)) && report.location && typeof report.location === 'string') {
+    const matchLat = report.location.match(/([\d.]+)\s*°?\s*N/i);
+    if (matchLat) lat = parseFloat(matchLat[1]);
+  }
+
+  if ((lng == null || isNaN(lng)) && report.location && typeof report.location === 'string') {
+    const matchLng = report.location.match(/([\d.]+)\s*°?\s*E/i);
+    if (matchLng) lng = parseFloat(matchLng[1]);
+  }
+
+  if (typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng)) {
+    return getStateFromCoords(lat, lng);
+  }
+
+  return 'Maharashtra';
 }
 
 function extractLat(locationStr) {
